@@ -9,6 +9,9 @@ let State = {
 let id = 0;
 
 server.on('connection', function (client) {
+  console.log(State.todos)
+  server.emit('action', { type: 'LOAD_ALL', todos: State.todos })
+
   console.log('client connected');
   state = client.on('action', action => {
     //remove 'server/' in front of action type -> actions are the same as on the client
