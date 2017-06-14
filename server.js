@@ -1,4 +1,18 @@
-const server = require('socket.io')();
+var fs = require('fs');
+var https = require('https');
+
+var express = require('express');
+var app = express();
+
+var options = {
+  key: fs.readFileSync('/etc/letsencrypt/live/larsnolden.com/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/larsnolden.com/cert.pem')
+};
+
+var serverPort = 3003;
+
+var server = https.createServer(options, app);
+var io = require('socket.io')(server);
 
 var Todo = require('./todo.js')
 
@@ -8,9 +22,9 @@ var State = {
 
 let id = 0;
 
-server.on('connection', function (client) {
+io.on('connection', function (client) {
   console.log('client connected');
-  server.emit('action', { type: 'LOAD_ALL', todos: State.todos })
+  io.emit('action', { type: 'LOAD_ALL', todos: State.todos })
 
   let reducer = (action) => {
     //remove 'server/' in front of action type -> actions are the same as on the client
@@ -19,19 +33,19 @@ server.on('connection', function (client) {
     switch (action.type) {
       case 'ADD_TODO':
         let todo = new Todo(action.title, id++)
-        server.emit('action', { type: 'ADD_TODO', todo });
+        io.emit('action', { type: 'ADD_TODO', todo });
         return Object.assign({}, State, { todos: State.todos.concat([todo]) })
       case 'REMOVE_TODO':
-        server.emit('action', { type: 'REMOVE_TODO', id: action.id });
+        io.emit('action', { type: 'REMOVE_TODO', id: action.id });
         return Object.assign({}, State, { todos: State.todos.filter(todo => todo.id !== action.id) })
       case 'SET_DONE_TODO':
-        server.emit('action', { type: 'SET_DONE_TODO', id: action.id });
+        io.emit('action', { type: 'SET_DONE_TODO', id: action.id });
         return Object.assign({}, State, { todos: State.todos.map(todo => todo.id === action.id ? Object.defineProperty(todo, 'done', { value: (!todo.done) }) : todo) })
       case 'DELETE_ALL':
-        server.emit('action', { type: 'DELETE_ALL' });
+        io.emit('action', { type: 'DELETE_ALL' });
         return { todos: [] }
       case 'FINISH_ALL':
-        server.emit('action', { type: 'FINISH_ALL' });
+        io.emit('action', { type: 'FINISH_ALL' });
         return Object.assign({}, State, { todos: State.todos.map(todo => Object.defineProperty(todo, 'done', { value: (true) })) })
     }
   }
@@ -42,5 +56,3 @@ server.on('connection', function (client) {
 });
 
 console.log('Waiting for clients to connect');
-
-server.listen(3003);
