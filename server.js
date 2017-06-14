@@ -55,4 +55,7 @@ io.on('connection', function (client) {
   });
 });
 
-console.log('Waiting for clients to connect');
+server.listen(serverPort, function () {
+  console.log('Waiting for clients to connect');
+});
+
